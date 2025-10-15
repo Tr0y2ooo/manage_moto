@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>🏍️ 機車庫存管理系統</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+  <style>
+    body { margin:0; font-family:"Noto Sans TC",sans-serif; background:#121212; color:#f0f0f0;}
+    header { background:linear-gradient(90deg,#1f1f1f,#2c2c2c); color:#80e27e; text-align:center; padding:16px 0; font-size:1.8rem; font-weight:bold; letter-spacing:1px; box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+    main { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; padding:30px; max-width:1300px; margin:auto;}
+    #loginContainer, #formContainer { background:#1e1e1e; border-radius:12px; padding:24px; width:380px; box-shadow:0 0 12px rgba(0,0,0,0.4);}
+    h2 { color:#a5d6a7; border-left:4px solid #81c784; padding-left:8px;}
+    label { display:block; margin-top:12px; font-weight:600;}
+    input, textarea, select, button { width:100%; padding:8px; margin-top:6px; border:none; border-radius:6px; font-size:0.95rem; outline:none;}
+    input, textarea, select { background:#2a2a2a; color:#eee;}
+    input:focus, textarea:focus, select:focus { background:#333; border:1px solid #81c784;}
+    button { cursor:pointer; margin-top:16px; transition:0.2s;}
+    button:hover { transform:scale(1.03);}
+    #bikeGrid { flex:1; min-width:650px; display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
+    .bike-card { background:#1f1f1f; border-radius:12px; padding:16px; width:300px; box-shadow:0 0 10px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;}
+    .bike-card:hover { transform:translateY(-4px); box-shadow:0 0 18px rgba(129,199,132,0.3);}
+    .image-slider { display:flex; overflow-x:auto; gap:8px; margin-bottom:8px;}
+    .image-slider img { height:140px; border-radius:8px; flex-shrink:0;}
+    .status-badge { padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; }
+    .status-badge.販售中{background:#2e7d32;color:#fff;}
+    .status-badge.已售出{background:#c62828;color:#fff;}
+    .status-badge.暫售{background:#ffb300;color:#000;}
+    .status-badge.維修中{background:#1565c0;color:#fff;}
+  </style>
+</head>
+<body>
+  <header>🏍️ 機車庫存管理系統</header>
+  <main>
+    <!-- 登入區 -->
+    <div id="loginContainer">
+      <h2>使用者登入</h2>
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="密碼">
+      <button id="loginBtn">登入</button>
+      <p id="loginStatus"></p>
+      <button id="logoutBtn" style="display:none;">登出</button>
+    </div>
+
+    <!-- 機車資料表單 -->
+    <div id="formContainer" style="display:none;">
+      <h2>新增機車資料</h2>
+      <form id="bikeForm">
+        <label>機車圖片:</label>
+        <input type="file" id="imageFile" accept="image/*" multiple required>
+        <label>車種名稱:</label>
+        <input type="text" id="model" required>
+        <label>年份:</label>
+        <input type="number" id="year" min="1900" max="2100" required>
+        <label>里程:</label>
+        <input type="number" id="mileage" min="0" required>
+        <label>車況:</label>
+        <input type="text" id="condition" required>
+        <label>備註:</label>
+        <textarea id="note" rows="3"></textarea>
+        <label>即時狀態:</label>
+        <select id="status" required>
+          <option value="販售中">販售中</option>
+          <option value="已售出">已售出</option>
+          <option value="暫售">暫售</option>
+          <option value="維修中">維修中</option>
+        </select>
+        <button type="submit">上傳</button>
+      </form>
+      <p id="status"></p>
+    </div>
+
+    <!-- 機車清單 -->
+    <div id="bikeGrid"></div>
+  </main>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
+    authDomain: "bike-c4e9d.firebaseapp.com",
+    projectId: "bike-c4e9d",
+    storageBucket: "bike-c4e9d.appspot.com",
+    messagingSenderId: "239868665129",
+    appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const firestore = firebase.firestore();
+  const storage = firebase.storage();
+
+  const loginContainer = document.getElementById('loginContainer');
+  const loginStatus = document.getElementById('loginStatus');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const formContainer = document.getElementById('formContainer');
+  const form = document.getElementById('bikeForm');
+  const statusText = document.getElementById('status');
+  const bikeGrid = document.getElementById('bikeGrid');
+
+  // 監聽登入狀態
+  auth.onAuthStateChanged(user => {
+    if(user){
+      loginContainer.style.display='none';
+      formContainer.style.display='block';
+      logoutBtn.style.display='block';
+      loadBikes();
+    } else {
+      loginContainer.style.display='block';
+      formContainer.style.display='none';
+      logoutBtn.style.display='none';
+    }
+  });
+
+  // 登入
+  loginBtn.addEventListener('click', async ()=>{
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    try{
+      await auth.signInWithEmailAndPassword(email,password);
+      loginStatus.textContent = '✅ 登入成功';
+    }catch(e){
+      loginStatus.textContent = '登入失敗: '+e.message;
+    }
+  });
+
+  // 登出
+  logoutBtn.addEventListener('click', ()=> auth.signOut());
+
+  // 上傳機車資料
+  form.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const files = document.getElementById('imageFile').files;
+    const model = document.getElementById('model').value;
+    const year = document.getElementById('year').value;
+    const mileage = document.getElementById('mileage').value;
+    const condition = document.getElementById('condition').value;
+    const note = document.getElementById('note').value;
+    const bikeStatus = document.getElementById('status').value;
+
+    if(!files.length){ alert('請選擇至少一張圖片'); return; }
+
+    try{
+      statusText.textContent='圖片上傳中...';
+      const uploadPromises=[];
+      for(const file of files){
+        const ref = storage.ref('bikes/'+Date.now()+'_'+file.name);
+        uploadPromises.push(ref.put(file).then(()=>ref.getDownloadURL()));
+      }
+      const imageUrls = await Promise.all(uploadPromises);
+
+      statusText.textContent='儲存資料中...';
+      await firestore.collection('bikes').add({
+        model,
+        year:Number(year),
+        mileage:Number(mileage),
+        condition,
+        note,
+        status:bikeStatus,
+        statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        imageUrls,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      statusText.textContent='✅ 上傳成功！';
+      form.reset();
+      loadBikes();
+    }catch(err){
+      console.error(err);
+      statusText.textContent='上傳失敗: '+err.message;
+    }
+  });
+
+  // 載入資料
+  async function loadBikes(){
+    bikeGrid.innerHTML='';
+    const snapshot = await firestore.collection('bikes').orderBy('createdAt','desc').get();
+    snapshot.forEach(doc=>{
+      const data = doc.data();
+      const imagesHtml = Array.isArray(data.imageUrls)?data.imageUrls.map(url=>`<img src="${url}" />`).join(''):'<p>沒有圖片</p>';
+      const card=document.createElement('div');
+      card.className='bike-card';
+      card.innerHTML=`
+        <div class="image-slider">${imagesHtml}</div>
+        <div class="bike-info">
+          <p><strong>車種：</strong>${data.model}</p>
+          <p><strong>年份：</strong>${data.year}</p>
+          <p><strong>里程：</strong>${data.mileage} 公里</p>
+          <p><strong>車況：</strong>${data.condition}</p>
+          <p><strong>備註：</strong>${data.note||'-'}</p>
+          <p><strong>狀態：</strong><span class="status-badge ${data.status}">${data.status}</span></p>
+        </div>
+      `;
+      bikeGrid.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>
