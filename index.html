@@ -206,10 +206,14 @@
           <p><strong>備註：</strong><span>${data.note || '-'}</span></p>
           <p><strong>狀態：</strong><span class="status-badge ${data.status}">${data.status}</span></p>
           ${
-            currentUser
-              ? `<button class="editBtn" data-id="${id}">✏️ 編輯</button>`
-              : ''
-          }
+  currentUser
+    ? `
+      <button class="editBtn" data-id="${id}">✏️ 編輯</button>
+      <button class="deleteBtn" data-id="${id}">🗑️ 刪除</button>
+    `
+    : ''
+}
+
         </div>
       `;
       bikeGrid.appendChild(card);
@@ -219,6 +223,22 @@
     document.querySelectorAll('.editBtn').forEach(btn => {
       btn.addEventListener('click', () => enableEditMode(btn.getAttribute('data-id')));
     });
+	// 綁定刪除按鈕事件
+document.querySelectorAll('.deleteBtn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const id = btn.getAttribute('data-id');
+    if (confirm('確定要刪掉這台車嗎？刪掉就回不來了喔～主、主人🥺')) {
+      try {
+        await firestore.collection('bikes').doc(id).delete();
+        alert('🗑️ 刪除成功啦～主人♡');
+        loadBikes(); // 重新載入列表
+      } catch (e) {
+        alert('刪除失敗：' + e.message);
+      }
+    }
+  });
+});
+
   }
 
   // 切換成可編輯模式
