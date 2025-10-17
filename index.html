@@ -79,13 +79,13 @@
 
 <script>
   const firebaseConfig = {
-      apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
-      authDomain: "bike-c4e9d.firebaseapp.com",
-      projectId: "bike-c4e9d",
-      storageBucket: "bike-c4e9d.firebasestorage.app",
-      messagingSenderId: "239868665129",
-      appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
-    };
+    apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
+    authDomain: "bike-c4e9d.firebaseapp.com",
+    projectId: "bike-c4e9d",
+    storageBucket: "bike-c4e9d.firebasestorage.app",
+    messagingSenderId: "239868665129",
+    appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
+  };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const firestore = firebase.firestore();
@@ -100,110 +100,186 @@
   const statusText = document.getElementById('status');
   const bikeGrid = document.getElementById('bikeGrid');
 
+  let currentUser = null;
+
   // 監聽登入狀態
   auth.onAuthStateChanged(user => {
-    if(user){
-      loginContainer.style.display='none';
-      formContainer.style.display='block';
-      logoutBtn.style.display='block';
+    currentUser = user;
+    if (user) {
+      loginContainer.style.display = 'none';
+      formContainer.style.display = 'block';
+      logoutBtn.style.display = 'block';
       loadBikes();
     } else {
-      loginContainer.style.display='block';
-      formContainer.style.display='none';
-      logoutBtn.style.display='none';
+      loginContainer.style.display = 'block';
+      formContainer.style.display = 'none';
+      logoutBtn.style.display = 'none';
+      bikeGrid.innerHTML = '';
     }
   });
 
   // 登入
-  loginBtn.addEventListener('click', async ()=>{
+  loginBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    try{
-      await auth.signInWithEmailAndPassword(email,password);
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
       loginStatus.textContent = '✅ 登入成功';
-    }catch(e){
-      loginStatus.textContent = '登入失敗: '+e.message;
+    } catch (e) {
+      loginStatus.textContent = '登入失敗: ' + e.message;
     }
   });
 
   // 登出
-  logoutBtn.addEventListener('click', ()=> auth.signOut());
+  logoutBtn.addEventListener('click', () => auth.signOut());
 
-  // 上傳機車資料
+  // 上傳資料
   form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    e.preventDefault();
+    const files = document.getElementById('imageFile').files;
+    const model = document.getElementById('model').value;
+    const year = document.getElementById('year').value;
+    const mileage = document.getElementById('mileage').value;
+    const condition = document.getElementById('condition').value;
+    const note = document.getElementById('note').value;
+    const bikeStatus = document.getElementById('status').value;
 
-      const files = document.getElementById('imageFile').files;
-      const model = document.getElementById('model').value;
-      const year = document.getElementById('year').value;
-      const mileage = document.getElementById('mileage').value;
-      const condition = document.getElementById('condition').value;
-      const note = document.getElementById('note').value;
-      const bikeStatus = document.getElementById('status').value;
+    if (!files.length) {
+      alert('請選擇至少一張圖片');
+      return;
+    }
 
-      if (!files.length) {
-        alert('請選擇至少一張圖片');
-        return;
+    try {
+      statusText.textContent = '圖片上傳中...';
+      const uploadPromises = [];
+      for (const file of files) {
+        const imageRef = storage.ref('bikes/' + Date.now() + '_' + file.name);
+        const uploadTask = imageRef.put(file).then(() => imageRef.getDownloadURL());
+        uploadPromises.push(uploadTask);
       }
+      const imageUrls = await Promise.all(uploadPromises);
 
-      try {
-        statusText.textContent = '圖片上傳中...';
-        const uploadPromises = [];
-        for (const file of files) {
-          const imageRef = storage.ref('bikes/' + Date.now() + '_' + file.name);
-          const uploadTask = imageRef.put(file).then(() => imageRef.getDownloadURL());
-          uploadPromises.push(uploadTask);
-        }
-        const imageUrls = await Promise.all(uploadPromises);
+      statusText.textContent = '儲存資料中...';
 
-        statusText.textContent = '儲存資料中...';
+      await firestore.collection('bikes').add({
+        model,
+        year: Number(year),
+        mileage: Number(mileage),
+        condition,
+        note,
+        status: bikeStatus,
+        statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        imageUrls,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
 
-        await firestore.collection('bikes').add({
-          model,
-          year: Number(year),
-          mileage: Number(mileage),
-          condition,
-          note,
-          status: bikeStatus,
-          statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          imageUrls,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        statusText.textContent = '✅ 上傳成功！';
-        form.reset();
-        loadBikes();
-
-      } catch (error) {
-        console.error(error);
-        statusText.textContent = '上傳失敗: ' + error.message;
-      }
-    });
+      statusText.textContent = '✅ 上傳成功！';
+      form.reset();
+      loadBikes();
+    } catch (error) {
+      console.error(error);
+      statusText.textContent = '上傳失敗: ' + error.message;
+    }
+  });
 
   // 載入資料
-  async function loadBikes(){
-    bikeGrid.innerHTML='';
-    const snapshot = await firestore.collection('bikes').orderBy('createdAt','desc').get();
-    snapshot.forEach(doc=>{
+  async function loadBikes() {
+    bikeGrid.innerHTML = '';
+    const snapshot = await firestore.collection('bikes').orderBy('createdAt', 'desc').get();
+    snapshot.forEach(doc => {
       const data = doc.data();
-      const imagesHtml = Array.isArray(data.imageUrls)?data.imageUrls.map(url=>`<img src="${url}" />`).join(''):'<p>沒有圖片</p>';
-      const card=document.createElement('div');
-      card.className='bike-card';
-      card.innerHTML=`
+      const id = doc.id;
+
+      const imagesHtml = Array.isArray(data.imageUrls)
+        ? data.imageUrls.map(url => `<img src="${url}" />`).join('')
+        : '<p>沒有圖片</p>';
+
+      const card = document.createElement('div');
+      card.className = 'bike-card';
+      card.innerHTML = `
         <div class="image-slider">${imagesHtml}</div>
-        <div class="bike-info">
-          <p><strong>車種：</strong>${data.model}</p>
-          <p><strong>年份：</strong>${data.year}</p>
-          <p><strong>里程：</strong>${data.mileage} 公里</p>
-          <p><strong>車況：</strong>${data.condition}</p>
-          <p><strong>備註：</strong>${data.note||'-'}</p>
+        <div class="bike-info" id="info-${id}">
+          <p><strong>車種：</strong><span>${data.model}</span></p>
+          <p><strong>年份：</strong><span>${data.year}</span></p>
+          <p><strong>里程：</strong><span>${data.mileage}</span></p>
+          <p><strong>車況：</strong><span>${data.condition}</span></p>
+          <p><strong>備註：</strong><span>${data.note || '-'}</span></p>
           <p><strong>狀態：</strong><span class="status-badge ${data.status}">${data.status}</span></p>
+          ${
+            currentUser
+              ? `<button class="editBtn" data-id="${id}">✏️ 編輯</button>`
+              : ''
+          }
         </div>
       `;
       bikeGrid.appendChild(card);
     });
+
+    // 綁定編輯按鈕事件
+    document.querySelectorAll('.editBtn').forEach(btn => {
+      btn.addEventListener('click', () => enableEditMode(btn.getAttribute('data-id')));
+    });
   }
+
+  // 切換成可編輯模式
+  function enableEditMode(id) {
+    const infoDiv = document.getElementById(`info-${id}`);
+    const spans = infoDiv.querySelectorAll('span');
+    const values = Array.from(spans).map(s => s.textContent);
+
+    infoDiv.innerHTML = `
+      <p><strong>車種：</strong><input id="edit-model-${id}" value="${values[0]}"></p>
+      <p><strong>年份：</strong><input type="number" id="edit-year-${id}" value="${values[1]}"></p>
+      <p><strong>里程：</strong><input type="number" id="edit-mileage-${id}" value="${values[2]}"></p>
+      <p><strong>車況：</strong><input id="edit-condition-${id}" value="${values[3]}"></p>
+      <p><strong>備註：</strong><textarea id="edit-note-${id}">${values[4] !== '-' ? values[4] : ''}</textarea></p>
+      <p><strong>狀態：</strong>
+        <select id="edit-status-${id}">
+          <option value="販售中">販售中</option>
+          <option value="已售出">已售出</option>
+          <option value="暫售">暫售</option>
+          <option value="維修中">維修中</option>
+        </select>
+      </p>
+      <button class="saveBtn" data-id="${id}">💾 儲存</button>
+      <button class="cancelBtn" data-id="${id}">❌ 取消</button>
+    `;
+
+    // 設定狀態初始值
+    const statusSelect = document.getElementById(`edit-status-${id}`);
+    statusSelect.value = infoDiv.querySelector('.status-badge')?.textContent || '販售中';
+
+    // 綁定按鈕
+    infoDiv.querySelector('.saveBtn').addEventListener('click', async () => {
+      await saveChanges(id);
+    });
+    infoDiv.querySelector('.cancelBtn').addEventListener('click', loadBikes);
+  }
+
+  // 儲存修改
+  async function saveChanges(id) {
+    const model = document.getElementById(`edit-model-${id}`).value;
+    const year = Number(document.getElementById(`edit-year-${id}`).value);
+    const mileage = Number(document.getElementById(`edit-mileage-${id}`).value);
+    const condition = document.getElementById(`edit-condition-${id}`).value;
+    const note = document.getElementById(`edit-note-${id}`).value;
+    const status = document.getElementById(`edit-status-${id}`).value;
+
+    try {
+      await firestore.collection('bikes').doc(id).update({
+        model, year, mileage, condition, note, status,
+        statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      alert('✅ 已更新成功！');
+      loadBikes();
+    } catch (e) {
+      alert('更新失敗：' + e.message);
+    }
+  }
+
   window.onload = loadBikes;
 </script>
+
+
 </body>
 </html>
