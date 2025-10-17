@@ -79,13 +79,13 @@
 
 <script>
   const firebaseConfig = {
-    apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
-    authDomain: "bike-c4e9d.firebaseapp.com",
-    projectId: "bike-c4e9d",
-    storageBucket: "bike-c4e9d.appspot.com",
-    messagingSenderId: "239868665129",
-    appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
-  };
+      apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
+      authDomain: "bike-c4e9d.firebaseapp.com",
+      projectId: "bike-c4e9d",
+      storageBucket: "bike-c4e9d.firebasestorage.app",
+      messagingSenderId: "239868665129",
+      appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
+    };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const firestore = firebase.firestore();
@@ -130,47 +130,55 @@
   logoutBtn.addEventListener('click', ()=> auth.signOut());
 
   // 上傳機車資料
-  form.addEventListener('submit', async e=>{
-    e.preventDefault();
-    const files = document.getElementById('imageFile').files;
-    const model = document.getElementById('model').value;
-    const year = document.getElementById('year').value;
-    const mileage = document.getElementById('mileage').value;
-    const condition = document.getElementById('condition').value;
-    const note = document.getElementById('note').value;
-    const bikeStatus = document.getElementById('status').value;
+  form.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    if(!files.length){ alert('請選擇至少一張圖片'); return; }
+      const files = document.getElementById('imageFile').files;
+      const model = document.getElementById('model').value;
+      const year = document.getElementById('year').value;
+      const mileage = document.getElementById('mileage').value;
+      const condition = document.getElementById('condition').value;
+      const note = document.getElementById('note').value;
+      const bikeStatus = document.getElementById('status').value;
 
-    try{
-      statusText.textContent='圖片上傳中...';
-      const uploadPromises=[];
-      for(const file of files){
-        const ref = storage.ref('bikes/'+Date.now()+'_'+file.name);
-        uploadPromises.push(ref.put(file).then(()=>ref.getDownloadURL()));
+      if (!files.length) {
+        alert('請選擇至少一張圖片');
+        return;
       }
-      const imageUrls = await Promise.all(uploadPromises);
 
-      statusText.textContent='儲存資料中...';
-      await firestore.collection('bikes').add({
-        model,
-        year:Number(year),
-        mileage:Number(mileage),
-        condition,
-        note,
-        status:bikeStatus,
-        statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        imageUrls,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      statusText.textContent='✅ 上傳成功！';
-      form.reset();
-      loadBikes();
-    }catch(err){
-      console.error(err);
-      statusText.textContent='上傳失敗: '+err.message;
-    }
-  });
+      try {
+        statusText.textContent = '圖片上傳中...';
+        const uploadPromises = [];
+        for (const file of files) {
+          const imageRef = storage.ref('bikes/' + Date.now() + '_' + file.name);
+          const uploadTask = imageRef.put(file).then(() => imageRef.getDownloadURL());
+          uploadPromises.push(uploadTask);
+        }
+        const imageUrls = await Promise.all(uploadPromises);
+
+        statusText.textContent = '儲存資料中...';
+
+        await firestore.collection('bikes').add({
+          model,
+          year: Number(year),
+          mileage: Number(mileage),
+          condition,
+          note,
+          status: bikeStatus,
+          statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          imageUrls,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        statusText.textContent = '✅ 上傳成功！';
+        form.reset();
+        loadBikes();
+
+      } catch (error) {
+        console.error(error);
+        statusText.textContent = '上傳失敗: ' + error.message;
+      }
+    });
 
   // 載入資料
   async function loadBikes(){
@@ -195,6 +203,7 @@
       bikeGrid.appendChild(card);
     });
   }
+  window.onload = loadBikes;
 </script>
 </body>
 </html>
