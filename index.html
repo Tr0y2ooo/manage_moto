@@ -1,305 +1,316 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <title>🏍️ 機車庫存管理系統</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<meta charset="UTF-8">
+<title>🏍️ 機車庫存管理系統</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
-  <style>
-    body { margin:0; font-family:"Noto Sans TC",sans-serif; background:#121212; color:#f0f0f0;}
-    header { background:linear-gradient(90deg,#1f1f1f,#2c2c2c); color:#80e27e; text-align:center; padding:16px 0; font-size:1.8rem; font-weight:bold; letter-spacing:1px; box-shadow:0 2px 10px rgba(0,0,0,0.3);}
-    main { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; padding:30px; max-width:1300px; margin:auto;}
-    #loginContainer, #formContainer { background:#1e1e1e; border-radius:12px; padding:24px; width:380px; box-shadow:0 0 12px rgba(0,0,0,0.4);}
-    h2 { color:#a5d6a7; border-left:4px solid #81c784; padding-left:8px;}
-    label { display:block; margin-top:12px; font-weight:600;}
-    input, textarea, select, button { width:100%; padding:8px; margin-top:6px; border:none; border-radius:6px; font-size:0.95rem; outline:none;}
-    input, textarea, select { background:#2a2a2a; color:#eee;}
-    input:focus, textarea:focus, select:focus { background:#333; border:1px solid #81c784;}
-    button { cursor:pointer; margin-top:16px; transition:0.2s;}
-    button:hover { transform:scale(1.03);}
-    #bikeGrid { flex:1; min-width:650px; display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
-    .bike-card { background:#1f1f1f; border-radius:12px; padding:16px; width:300px; box-shadow:0 0 10px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;}
-    .bike-card:hover { transform:translateY(-4px); box-shadow:0 0 18px rgba(129,199,132,0.3);}
-    .image-slider { display:flex; overflow-x:auto; gap:8px; margin-bottom:8px;}
-    .image-slider img { height:140px; border-radius:8px; flex-shrink:0;}
-    .status-badge { padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; }
-    .status-badge.販售中{background:#2e7d32;color:#fff;}
-    .status-badge.已售出{background:#c62828;color:#fff;}
-    .status-badge.暫售{background:#ffb300;color:#000;}
-    .status-badge.維修中{background:#1565c0;color:#fff;}
-  </style>
+<style>
+body { margin:0; font-family:"Noto Sans TC",sans-serif; background:#121212; color:#f0f0f0;}
+header { background:linear-gradient(90deg,#1f1f1f,#2c2c2c); color:#80e27e; text-align:center; padding:16px 0; font-size:1.8rem; font-weight:bold; letter-spacing:1px; box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+main { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; padding:30px; max-width:1300px; margin:auto;}
+#loginContainer, #formContainer { background:#1e1e1e; border-radius:12px; padding:24px; width:380px; box-shadow:0 0 12px rgba(0,0,0,0.4);}
+h2 { color:#a5d6a7; border-left:4px solid #81c784; padding-left:8px;}
+label { display:block; margin-top:12px; font-weight:600;}
+input, textarea, select, button { width:100%; padding:8px; margin-top:6px; border:none; border-radius:6px; font-size:0.95rem; outline:none;}
+input, textarea, select { background:#2a2a2a; color:#eee;}
+input:focus, textarea:focus, select:focus { background:#333; border:1px solid #81c784;}
+button { cursor:pointer; margin-top:16px; transition:0.2s;}
+button:hover { transform:scale(1.03);}
+#bikeGrid { flex:1; min-width:650px; display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
+.bike-card { background:#1f1f1f; border-radius:12px; padding:16px; width:300px; box-shadow:0 0 10px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;}
+.bike-card:hover { transform:translateY(-4px); box-shadow:0 0 18px rgba(129,199,132,0.3);}
+.image-slider { display:flex; overflow-x:auto; gap:8px; margin-bottom:8px;}
+.image-slider img { height:140px; border-radius:8px; flex-shrink:0;}
+.status-badge { padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; }
+.status-badge.販售中{background:#2e7d32;color:#fff;}
+.status-badge.已售出{background:#c62828;color:#fff;}
+.status-badge.暫售{background:#ffb300;color:#000;}
+.status-badge.維修中{background:#1565c0;color:#fff;}
+</style>
 </head>
 <body>
-  <header>🏍️ 機車庫存管理系統</header>
-  <main>
-    <!-- 登入區 -->
-    <div id="loginContainer">
-      <h2>使用者登入</h2>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="密碼">
-      <button id="loginBtn">登入</button>
-      <p id="loginStatus"></p>
-      <button id="logoutBtn" style="display:none;">登出</button>
-    </div>
+<header>🏍️ 機車庫存管理系統</header>
+<main>
+  <!-- 登入區 -->
+  <div id="loginContainer">
+    <h2>使用者登入</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="密碼">
+    <button id="loginBtn">登入</button>
+    <p id="loginStatus"></p>
+    <button id="logoutBtn" style="display:none;">登出</button>
+  </div>
 
-    <!-- 機車資料表單 -->
-    <div id="formContainer" style="display:none;">
-      <h2>新增機車資料</h2>
-      <form id="bikeForm">
-        <label>機車圖片:</label>
-        <input type="file" id="imageFile" accept="image/*" multiple required>
-        <label>車種名稱:</label>
-        <input type="text" id="model" required>
-        <label>年份:</label>
-        <input type="number" id="year" min="1900" max="2100" required>
-        <label>里程:</label>
-        <input type="number" id="mileage" min="0" required>
-        <label>車況:</label>
-        <input type="text" id="condition" required>
-        <label>備註:</label>
-        <textarea id="note" rows="3"></textarea>
-        <label>即時狀態:</label>
-        <select id="status" required>
-          <option value="販售中">販售中</option>
-          <option value="已售出">已售出</option>
-          <option value="暫售">暫售</option>
-          <option value="維修中">維修中</option>
-        </select>
-        <button type="submit">上傳</button>
-      </form>
-      <p id="status"></p>
-    </div>
+  <!-- 機車資料表單 -->
+  <div id="formContainer" style="display:none;">
+    <h2>新增機車資料</h2>
+    <form id="bikeForm">
+      <label>機車圖片:</label>
+      <input type="file" id="imageFile" accept="image/*" multiple required>
+      <label>車名:</label>
+      <input type="text" id="name" required>
+      <label>車種:</label>
+      <select id="type" required>
+        <option value="速可達">速可達</option>
+        <option value="打檔車">打檔車</option>
+        <option value="其他">其他</option>
+      </select>
+      <label>價錢 (NT$):</label>
+      <input type="number" id="price" min="0" required>
+      <label>年份:</label>
+      <input type="number" id="year" min="1900" max="2100" required>
+      <label>里程:</label>
+      <input type="number" id="mileage" min="0" required>
+      <label>排氣量(cc):</label>
+      <input type="number" id="displacement" min="0" required>
+      <label>車牌號碼:</label>
+      <input type="text" id="plate" required>
+      <label>車況:</label>
+      <input type="text" id="condition" required>
+      <label>車子所在地:</label>
+      <input type="text" id="location" required>
+      <label>備註:</label>
+      <textarea id="note" rows="3"></textarea>
+      <label>即時狀態:</label>
+      <select id="status" required>
+        <option value="販售中">販售中</option>
+        <option value="已售出">已售出</option>
+        <option value="暫售">暫售</option>
+        <option value="維修中">維修中</option>
+      </select>
+      <button type="submit">上傳</button>
+    </form>
+    <p id="uploadStatus"></p>
+  </div>
 
-    <!-- 機車清單 -->
-    <div id="bikeGrid"></div>
-  </main>
+  <!-- 機車清單 -->
+  <div id="bikeGrid"></div>
+</main>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
-    authDomain: "bike-c4e9d.firebaseapp.com",
-    projectId: "bike-c4e9d",
-    storageBucket: "bike-c4e9d.firebasestorage.app",
-    messagingSenderId: "239868665129",
-    appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const firestore = firebase.firestore();
-  const storage = firebase.storage();
+const firebaseConfig = {
+  apiKey: "AIzaSyDNeIDnfVZpb_lF_2RPBNDaP91nMC1JeWI",
+  authDomain: "bike-c4e9d.firebaseapp.com",
+  projectId: "bike-c4e9d",
+  storageBucket: "bike-c4e9d.firebasestorage.app",
+  messagingSenderId: "239868665129",
+  appId: "1:239868665129:web:0f80ce710a268bfde1eb38"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const firestore = firebase.firestore();
+const storage = firebase.storage();
 
-  const loginContainer = document.getElementById('loginContainer');
-  const loginStatus = document.getElementById('loginStatus');
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const formContainer = document.getElementById('formContainer');
-  const form = document.getElementById('bikeForm');
-  const statusText = document.getElementById('status');
-  const bikeGrid = document.getElementById('bikeGrid');
+const loginContainer = document.getElementById('loginContainer');
+const loginStatus = document.getElementById('loginStatus');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const formContainer = document.getElementById('formContainer');
+const form = document.getElementById('bikeForm');
+const statusText = document.getElementById('uploadStatus');
+const bikeGrid = document.getElementById('bikeGrid');
 
-  let currentUser = null;
+let currentUser = null;
 
-  // 監聽登入狀態
-  auth.onAuthStateChanged(user => {
-    currentUser = user;
-    if (user) {
-      loginContainer.style.display = 'none';
-      formContainer.style.display = 'block';
-      logoutBtn.style.display = 'block';
-      loadBikes();
-    } else {
-      loginContainer.style.display = 'block';
-      formContainer.style.display = 'none';
-      logoutBtn.style.display = 'none';
-      bikeGrid.innerHTML = '';
-    }
-  });
-
-  // 登入
-  loginBtn.addEventListener('click', async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    try {
-      await auth.signInWithEmailAndPassword(email, password);
-      loginStatus.textContent = '✅ 登入成功';
-    } catch (e) {
-      loginStatus.textContent = '登入失敗: ' + e.message;
-    }
-  });
-
-  // 登出
-  logoutBtn.addEventListener('click', () => auth.signOut());
-
-  // 上傳資料
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const files = document.getElementById('imageFile').files;
-    const model = document.getElementById('model').value;
-    const year = document.getElementById('year').value;
-    const mileage = document.getElementById('mileage').value;
-    const condition = document.getElementById('condition').value;
-    const note = document.getElementById('note').value;
-    const bikeStatus = document.getElementById('status').value;
-
-    if (!files.length) {
-      alert('請選擇至少一張圖片');
-      return;
-    }
-
-    try {
-      statusText.textContent = '圖片上傳中...';
-      const uploadPromises = [];
-      for (const file of files) {
-        const imageRef = storage.ref('bikes/' + Date.now() + '_' + file.name);
-        const uploadTask = imageRef.put(file).then(() => imageRef.getDownloadURL());
-        uploadPromises.push(uploadTask);
-      }
-      const imageUrls = await Promise.all(uploadPromises);
-
-      statusText.textContent = '儲存資料中...';
-
-      await firestore.collection('bikes').add({
-        model,
-        year: Number(year),
-        mileage: Number(mileage),
-        condition,
-        note,
-        status: bikeStatus,
-        statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        imageUrls,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      statusText.textContent = '✅ 上傳成功！';
-      form.reset();
-      loadBikes();
-    } catch (error) {
-      console.error(error);
-      statusText.textContent = '上傳失敗: ' + error.message;
-    }
-  });
-
-  // 載入資料
-  async function loadBikes() {
-    bikeGrid.innerHTML = '';
-    const snapshot = await firestore.collection('bikes').orderBy('createdAt', 'desc').get();
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const id = doc.id;
-
-      const imagesHtml = Array.isArray(data.imageUrls)
-        ? data.imageUrls.map(url => `<img src="${url}" />`).join('')
-        : '<p>沒有圖片</p>';
-
-      const card = document.createElement('div');
-      card.className = 'bike-card';
-      card.innerHTML = `
-        <div class="image-slider">${imagesHtml}</div>
-        <div class="bike-info" id="info-${id}">
-          <p><strong>車種：</strong><span>${data.model}</span></p>
-          <p><strong>年份：</strong><span>${data.year}</span></p>
-          <p><strong>里程：</strong><span>${data.mileage}</span></p>
-          <p><strong>車況：</strong><span>${data.condition}</span></p>
-          <p><strong>備註：</strong><span>${data.note || '-'}</span></p>
-          <p><strong>狀態：</strong><span class="status-badge ${data.status}">${data.status}</span></p>
-          ${
-  currentUser
-    ? `
-      <button class="editBtn" data-id="${id}">✏️ 編輯</button>
-      <button class="deleteBtn" data-id="${id}">🗑️ 刪除</button>
-    `
-    : ''
-}
-
-        </div>
-      `;
-      bikeGrid.appendChild(card);
-    });
-
-    // 綁定編輯按鈕事件
-    document.querySelectorAll('.editBtn').forEach(btn => {
-      btn.addEventListener('click', () => enableEditMode(btn.getAttribute('data-id')));
-    });
-	// 綁定刪除按鈕事件
-document.querySelectorAll('.deleteBtn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const id = btn.getAttribute('data-id');
-    if (confirm('確定要刪掉這台車嗎？刪掉就回不來了喔～主、主人🥺')) {
-      try {
-        await firestore.collection('bikes').doc(id).delete();
-        alert('🗑️ 刪除成功啦～主人♡');
-        loadBikes(); // 重新載入列表
-      } catch (e) {
-        alert('刪除失敗：' + e.message);
-      }
-    }
-  });
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if(user){
+    loginContainer.style.display='none';
+    formContainer.style.display='block';
+    logoutBtn.style.display='block';
+    loadBikes();
+  } else {
+    loginContainer.style.display='block';
+    formContainer.style.display='none';
+    logoutBtn.style.display='none';
+    bikeGrid.innerHTML='';
+  }
 });
 
+loginBtn.addEventListener('click', async ()=>{
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  try{
+    await auth.signInWithEmailAndPassword(email,password);
+    loginStatus.textContent='✅ 登入成功';
+  }catch(e){
+    loginStatus.textContent='登入失敗: '+e.message;
+  }
+});
+
+logoutBtn.addEventListener('click',()=>auth.signOut());
+
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const files = document.getElementById('imageFile').files;
+  const model = document.getElementById('name').value;
+  const type = document.getElementById('type').value;
+  const price = Number(document.getElementById('price').value);
+  const year = Number(document.getElementById('year').value);
+  const mileage = Number(document.getElementById('mileage').value);
+  const displacement = Number(document.getElementById('displacement').value);
+  const plate = document.getElementById('plate').value;
+  const condition = document.getElementById('condition').value;
+  const location = document.getElementById('location').value;
+  const note = document.getElementById('note').value;
+  const bikeStatus = document.getElementById('status').value;
+
+  if(!files.length){
+    alert('請選擇至少一張圖片');
+    return;
   }
 
-  // 切換成可編輯模式
-  function enableEditMode(id) {
-    const infoDiv = document.getElementById(`info-${id}`);
-    const spans = infoDiv.querySelectorAll('span');
-    const values = Array.from(spans).map(s => s.textContent);
+  try{
+    statusText.textContent='圖片上傳中...';
+    const uploadPromises=[];
+    for(const file of files){
+      const imageRef = storage.ref('bikes/'+Date.now()+'_'+file.name);
+      const uploadTask = imageRef.put(file).then(()=>imageRef.getDownloadURL());
+      uploadPromises.push(uploadTask);
+    }
+    const imageUrls = await Promise.all(uploadPromises);
 
-    infoDiv.innerHTML = `
-      <p><strong>車種：</strong><input id="edit-model-${id}" value="${values[0]}"></p>
-      <p><strong>年份：</strong><input type="number" id="edit-year-${id}" value="${values[1]}"></p>
-      <p><strong>里程：</strong><input type="number" id="edit-mileage-${id}" value="${values[2]}"></p>
-      <p><strong>車況：</strong><input id="edit-condition-${id}" value="${values[3]}"></p>
-      <p><strong>備註：</strong><textarea id="edit-note-${id}">${values[4] !== '-' ? values[4] : ''}</textarea></p>
-      <p><strong>狀態：</strong>
-        <select id="edit-status-${id}">
-          <option value="販售中">販售中</option>
-          <option value="已售出">已售出</option>
-          <option value="暫售">暫售</option>
-          <option value="維修中">維修中</option>
-        </select>
-      </p>
-      <button class="saveBtn" data-id="${id}">💾 儲存</button>
-      <button class="cancelBtn" data-id="${id}">❌ 取消</button>
-    `;
+    statusText.textContent='儲存資料中...';
 
-    // 設定狀態初始值
-    const statusSelect = document.getElementById(`edit-status-${id}`);
-    statusSelect.value = infoDiv.querySelector('.status-badge')?.textContent || '販售中';
-
-    // 綁定按鈕
-    infoDiv.querySelector('.saveBtn').addEventListener('click', async () => {
-      await saveChanges(id);
+    await firestore.collection('bikes').add({
+      model,type,price,year,mileage,displacement,plate,condition,location,note,
+      status: bikeStatus,
+      statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      imageUrls,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    infoDiv.querySelector('.cancelBtn').addEventListener('click', loadBikes);
-  }
 
-  // 儲存修改
-  async function saveChanges(id) {
-    const model = document.getElementById(`edit-model-${id}`).value;
+    statusText.textContent='✅ 上傳成功！';
+    form.reset();
+    document.getElementById('status').value='販售中';
+    document.getElementById('type').value='速可達';
+    loadBikes();
+  }catch(error){
+    console.error(error);
+    statusText.textContent='上傳失敗: '+error.message;
+  }
+});
+
+async function loadBikes(){
+  bikeGrid.innerHTML='';
+  const snapshot = await firestore.collection('bikes').orderBy('createdAt','desc').get();
+  snapshot.forEach(doc=>{
+    const data = doc.data();
+    const id = doc.id;
+
+    const imagesHtml = Array.isArray(data.imageUrls)
+      ? data.imageUrls.map(url=>`<img src="${url}" />`).join('')
+      : '<p>沒有圖片</p>';
+
+    const card = document.createElement('div');
+    card.className='bike-card';
+    card.innerHTML=`
+      <div class="image-slider">${imagesHtml}</div>
+      <div class="bike-info" id="info-${id}">
+        <p><strong>車名：</strong><span>${data.model}</span></p>
+        <p><strong>車種：</strong><span>${data.type}</span></p>
+        <p><strong>價錢：</strong><span>${data.price}</span></p>
+        <p><strong>年份：</strong><span>${data.year}</span></p>
+        <p><strong>里程：</strong><span>${data.mileage}</span></p>
+        <p><strong>排氣量：</strong><span>${data.displacement}</span></p>
+        <p><strong>車牌號碼：</strong><span>${data.plate}</span></p>
+        <p><strong>車況：</strong><span>${data.condition}</span></p>
+        <p><strong>所在地：</strong><span>${data.location}</span></p>
+        <p><strong>備註：</strong><span>${data.note||'-'}</span></p>
+        <p><strong>狀態：</strong><span class="status-badge ${data.status}">${data.status}</span></p>
+        ${currentUser?`<button class="editBtn" data-id="${id}">✏️ 編輯</button>
+        <button class="deleteBtn" data-id="${id}">🗑️ 刪除</button>`:''}
+      </div>
+    `;
+    bikeGrid.appendChild(card);
+  });
+
+  document.querySelectorAll('.editBtn').forEach(btn=>{
+    btn.addEventListener('click',()=>enableEditMode(btn.getAttribute('data-id')));
+  });
+  document.querySelectorAll('.deleteBtn').forEach(btn=>{
+    btn.addEventListener('click',async ()=>{
+      const id = btn.getAttribute('data-id');
+      if(confirm('確定要刪掉這台車嗎？刪掉就回不來了喔～主、主人🥺')){
+        try{
+          await firestore.collection('bikes').doc(id).delete();
+          alert('🗑️ 刪除成功啦～主人♡');
+          loadBikes();
+        }catch(e){
+          alert('刪除失敗：'+e.message);
+        }
+      }
+    });
+  });
+}
+
+function enableEditMode(id){
+  const infoDiv = document.getElementById(`info-${id}`);
+  const spans = infoDiv.querySelectorAll('span');
+  const values = Array.from(spans).map(s=>s.textContent);
+
+  infoDiv.innerHTML=`
+    <p><strong>車名：</strong><input id="edit-name-${id}" value="${values[0]}"></p>
+    <p><strong>車種：</strong>
+      <select id="edit-type-${id}">
+        <option value="速可達">速可達</option>
+        <option value="打檔車">打檔車</option>
+        <option value="其他">其他</option>
+      </select>
+    </p>
+    <p><strong>價錢：</strong><input type="number" id="edit-price-${id}" value="${values[2]}"></p>
+    <p><strong>年份：</strong><input type="number" id="edit-year-${id}" value="${values[3]}"></p>
+    <p><strong>里程：</strong><input type="number" id="edit-mileage-${id}" value="${values[4]}"></p>
+    <p><strong>排氣量：</strong><input type="number" id="edit-displacement-${id}" value="${values[5]}"></p>
+    <p><strong>車牌號碼：</strong><input id="edit-plate-${id}" value="${values[6]}"></p>
+    <p><strong>車況：</strong><input id="edit-condition-${id}" value="${values[7]}"></p>
+    <p><strong>所在地：</strong><input id="edit-location-${id}" value="${values[8]}"></p>
+    <p><strong>備註：</strong><textarea id="edit-note-${id}">${values[9]!=='-'?values[9]:''}</textarea></p>
+    <p><strong>狀態：</strong>
+      <select id="edit-status-${id}">
+        <option value="販售中">販售中</option>
+        <option value="已售出">已售出</option>
+        <option value="暫售">暫售</option>
+        <option value="維修中">維修中</option>
+      </select>
+    </p>
+    <button class="saveBtn" data-id="${id}">💾 儲存</button>
+    <button class="cancelBtn" data-id="${id}">❌ 取消</button>
+  `;
+  document.getElementById(`edit-type-${id}`).value=values[1];
+  document.getElementById(`edit-status-${id}`).value=values[10];
+
+  infoDiv.querySelector('.saveBtn').addEventListener('click', async ()=>{
+    const model = document.getElementById(`edit-name-${id}`).value;
+    const type = document.getElementById(`edit-type-${id}`).value;
+    const price = Number(document.getElementById(`edit-price-${id}`).value);
     const year = Number(document.getElementById(`edit-year-${id}`).value);
     const mileage = Number(document.getElementById(`edit-mileage-${id}`).value);
+    const displacement = Number(document.getElementById(`edit-displacement-${id}`).value);
+    const plate = document.getElementById(`edit-plate-${id}`).value;
     const condition = document.getElementById(`edit-condition-${id}`).value;
+    const location = document.getElementById(`edit-location-${id}`).value;
     const note = document.getElementById(`edit-note-${id}`).value;
     const status = document.getElementById(`edit-status-${id}`).value;
 
-    try {
+    try{
       await firestore.collection('bikes').doc(id).update({
-        model, year, mileage, condition, note, status,
+        model,type,price,year,mileage,displacement,plate,condition,location,note,status,
         statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       alert('✅ 已更新成功！');
       loadBikes();
-    } catch (e) {
-      alert('更新失敗：' + e.message);
+    }catch(e){
+      alert('更新失敗：'+e.message);
     }
-  }
+  });
 
-  window.onload = loadBikes;
+  infoDiv.querySelector('.cancelBtn').addEventListener('click', loadBikes);
+}
 </script>
-
-
 </body>
 </html>
