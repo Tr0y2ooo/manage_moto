@@ -7,21 +7,33 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
-body { margin:0; font-family:"Noto Sans TC",sans-serif; background:#121212; color:#f0f0f0;}
+body {
+margin:0;
+font-family:"Noto Sans TC",sans-serif;
+background:#121212;
+color:#f0f0f0;
+font-size:18px;
+}
 header { background:linear-gradient(90deg,#1f1f1f,#2c2c2c); color:#80e27e; text-align:center; padding:16px 0; font-size:1.8rem; font-weight:bold; letter-spacing:1px; box-shadow:0 2px 10px rgba(0,0,0,0.3);}
 main { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; padding:30px; max-width:1300px; margin:auto;}
 #loginContainer, #formContainer { background:#1e1e1e; border-radius:12px; padding:24px; width:380px; box-shadow:0 0 12px rgba(0,0,0,0.4);}
 h2 { color:#a5d6a7; border-left:4px solid #81c784; padding-left:8px;}
 label { display:block; margin-top:12px; font-weight:600;}
 input, textarea, select, button { width:100%; padding:8px; margin-top:6px; border:none; border-radius:6px; font-size:0.95rem; outline:none;}
-input, textarea, select { background:#2a2a2a; color:#eee;}
+input, textarea, select {
+background:#2a2a2a;
+color:#eee;
+font-size:16px;
+padding:10px;
+}
 input:focus, textarea:focus, select:focus { background:#333; border:1px solid #81c784;}
 button { cursor:pointer; margin-top:16px; transition:0.2s;}
 button:hover { transform:scale(1.03);}
 #bikeGrid { flex:1; min-width:650px; display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
-.bike-card { background:#1f1f1f; border-radius:12px; padding:16px; width:300px; box-shadow:0 0 10px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;}
+.bike-card { background:#1f1f1f; border-radius:12px; padding:16px; width:300px; box-shadow:0 0 10px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;font-size:17px;}
 .bike-card:hover { transform:translateY(-4px); box-shadow:0 0 18px rgba(129,199,132,0.3);}
 .image-slider { display:flex; overflow-x:auto; gap:8px; margin-bottom:8px;}
 .image-slider img { height:140px; border-radius:8px; flex-shrink:0;}
@@ -30,8 +42,28 @@ button:hover { transform:scale(1.03);}
 .status-badge.已售出{background:#c62828;color:#fff;}
 .status-badge.暫售{background:#ffb300;color:#000;}
 .status-badge.維修中{background:#1565c0;color:#fff;}
+@media (max-width:700px){
+
+main{
+flex-direction:column;
+padding:15px;
+}
+
+#bikeGrid{
+min-width:100%;
+}
+
+.bike-card{
+width:100%;
+}
+
+}
 </style>
 </head>
+    <div style="text-align:center;margin-top:10px;">
+<label>字體大小</label>
+<input type="range" id="fontSlider" min="14" max="24" value="18">
+</div>
 <body>
 <header>🏍️ 機車庫存管理系統</header>
 <main>
@@ -66,10 +98,10 @@ button:hover { transform:scale(1.03);}
       <label>里程:</label>
       <input type="number" id="mileage" min="0" required>
       <label>排氣量(cc):</label>
-      <input type="number" id="displacement" min="0" required>
+      <input type="number" id="displacement" min="0" step="0.1" required>
       <label>車牌號碼:</label>
-      <input type="text" id="plate" required>
-      <label>車況:</label>
+      <input type="text" id="plate" required oninput="this.value=this.value.toUpperCase()">
+      <label>改裝:</label>
       <input type="text" id="condition" required>
       <label>車子所在地:</label>
       <input type="text" id="location" required>
@@ -88,6 +120,17 @@ button:hover { transform:scale(1.03);}
   </div>
 
   <!-- 機車清單 -->
+   <div style="width:100%;max-width:900px;margin:auto;">
+<div id="searchArea" style="width:100%;max-width:900px;margin:auto;display:none;">
+    <input type="text" id="searchInput" placeholder="搜尋車名 / 車牌">
+<select id="filterStatus">
+<option value="">全部狀態</option>
+<option value="販售中">販售中</option>
+<option value="已售出">已售出</option>
+<option value="暫售">暫售</option>
+<option value="維修中">維修中</option>
+</select>
+</div>
   <div id="bikeGrid"></div>
 </main>
 
@@ -113,22 +156,37 @@ const formContainer = document.getElementById('formContainer');
 const form = document.getElementById('bikeForm');
 const statusText = document.getElementById('uploadStatus');
 const bikeGrid = document.getElementById('bikeGrid');
+document.getElementById('searchInput').addEventListener('input',loadBikes);
+document.getElementById('filterStatus').addEventListener('change',loadBikes);
 
 let currentUser = null;
 
 auth.onAuthStateChanged(user => {
-  currentUser = user;
-  if(user){
-    loginContainer.style.display='none';
-    formContainer.style.display='block';
-    logoutBtn.style.display='block';
-    loadBikes();
-  } else {
-    loginContainer.style.display='block';
-    formContainer.style.display='none';
-    logoutBtn.style.display='none';
-    bikeGrid.innerHTML='';
-  }
+
+currentUser = user;
+
+const searchArea = document.getElementById("searchArea");
+
+if(user){
+
+loginContainer.style.display='none';
+formContainer.style.display='block';
+logoutBtn.style.display='block';
+searchArea.style.display='block';
+
+loadBikes();
+
+}else{
+
+loginContainer.style.display='block';
+formContainer.style.display='none';
+logoutBtn.style.display='none';
+searchArea.style.display='none';
+
+bikeGrid.innerHTML='';
+
+}
+
 });
 
 loginBtn.addEventListener('click', async ()=>{
@@ -196,11 +254,25 @@ form.addEventListener('submit', async (e)=>{
 });
 
 async function loadBikes(){
+    const keyword = document.getElementById('searchInput').value.toLowerCase();
+const filter = document.getElementById('filterStatus').value;
   bikeGrid.innerHTML='';
   const snapshot = await firestore.collection('bikes').orderBy('createdAt','desc').get();
-  snapshot.forEach(doc=>{
-    const data = doc.data();
-    const id = doc.id;
+snapshot.forEach(doc=>{
+
+const data = doc.data();
+const id = doc.id;
+
+if(keyword){
+if(!data.model.toLowerCase().includes(keyword) &&
+!data.plate.toLowerCase().includes(keyword)){
+return;
+}
+}
+
+if(filter && data.status!==filter){
+return;
+}
 
     const imagesHtml = Array.isArray(data.imageUrls)
       ? data.imageUrls.map(url=>`<img src="${url}" />`).join('')
@@ -209,7 +281,9 @@ async function loadBikes(){
     const card = document.createElement('div');
     card.className='bike-card';
     card.innerHTML=`
-      <div class="image-slider">${imagesHtml}</div>
+      <div class="image-slider" id="slider-${id}">
+${imagesHtml}
+</div>
       <div class="bike-info" id="info-${id}">
         <p><strong>車名：</strong><span>${data.model}</span></p>
         <p><strong>車種：</strong><span>${data.type}</span></p>
@@ -218,7 +292,7 @@ async function loadBikes(){
         <p><strong>里程：</strong><span>${data.mileage}</span></p>
         <p><strong>排氣量：</strong><span>${data.displacement}</span></p>
         <p><strong>車牌號碼：</strong><span>${data.plate}</span></p>
-        <p><strong>車況：</strong><span>${data.condition}</span></p>
+        <p><strong>改裝：</strong><span>${data.condition}</span></p>
         <p><strong>所在地：</strong><span>${data.location}</span></p>
         <p><strong>備註：</strong><span>${data.note||'-'}</span></p>
         <p><strong>狀態：</strong><span class="status-badge ${data.status}">${data.status}</span></p>
@@ -227,6 +301,26 @@ async function loadBikes(){
       </div>
     `;
     bikeGrid.appendChild(card);
+    const slider = document.getElementById(`slider-${id}`);
+
+new Sortable(slider,{
+animation:150,
+
+onEnd: async function () {
+
+const newOrder=[];
+
+slider.querySelectorAll("img").forEach(img=>{
+newOrder.push(img.src);
+});
+
+await firestore.collection('bikes').doc(id).update({
+imageUrls:newOrder
+});
+
+}
+
+});
   });
 
   document.querySelectorAll('.editBtn').forEach(btn=>{
@@ -265,11 +359,15 @@ function enableEditMode(id){
     <p><strong>價錢：</strong><input type="number" id="edit-price-${id}" value="${values[2]}"></p>
     <p><strong>年份：</strong><input type="number" id="edit-year-${id}" value="${values[3]}"></p>
     <p><strong>里程：</strong><input type="number" id="edit-mileage-${id}" value="${values[4]}"></p>
-    <p><strong>排氣量：</strong><input type="number" id="edit-displacement-${id}" value="${values[5]}"></p>
-    <p><strong>車牌號碼：</strong><input id="edit-plate-${id}" value="${values[6]}"></p>
-    <p><strong>車況：</strong><input id="edit-condition-${id}" value="${values[7]}"></p>
+    <p><strong>排氣量：</strong><input type="number" step="0.1" id="edit-displacement-${id}" value="${values[5]}"></p>
+    <p><strong>車牌號碼：</strong><input id="edit-plate-${id}" value="${values[6]}" oninput="this.value=this.value.toUpperCase()"></p>
+    <p><strong>改裝：</strong><input id="edit-condition-${id}" value="${values[7]}"></p>
     <p><strong>所在地：</strong><input id="edit-location-${id}" value="${values[8]}"></p>
     <p><strong>備註：</strong><textarea id="edit-note-${id}">${values[9]!=='-'?values[9]:''}</textarea></p>
+    <p>
+<strong>更換照片：</strong>
+<input type="file" id="edit-images-${id}" multiple accept="image/*">
+</p>
     <p><strong>狀態：</strong>
       <select id="edit-status-${id}">
         <option value="販售中">販售中</option>
@@ -298,10 +396,36 @@ function enableEditMode(id){
     const status = document.getElementById(`edit-status-${id}`).value;
 
     try{
-      await firestore.collection('bikes').doc(id).update({
-        model,type,price,year,mileage,displacement,plate,condition,location,note,status,
-        statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      const files = document.getElementById(`edit-images-${id}`).files;
+
+let imageUrls = [];
+
+if(files.length){
+
+for(const file of files){
+
+const ref = storage.ref('bikes/'+Date.now()+"_"+file.name);
+
+await ref.put(file);
+
+const url = await ref.getDownloadURL();
+
+imageUrls.push(url);
+
+}
+
+}
+
+const updateData={
+model,type,price,year,mileage,displacement,plate,condition,location,note,status,
+statusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}
+
+if(imageUrls.length){
+updateData.imageUrls=imageUrls;
+}
+
+await firestore.collection('bikes').doc(id).update(updateData);
       alert('✅ 已更新成功！');
       loadBikes();
     }catch(e){
@@ -311,6 +435,13 @@ function enableEditMode(id){
 
   infoDiv.querySelector('.cancelBtn').addEventListener('click', loadBikes);
 }
+const fontSlider = document.getElementById("fontSlider");
+
+fontSlider.addEventListener("input",()=>{
+
+document.body.style.fontSize = fontSlider.value + "px";
+
+});
 </script>
 </body>
 </html>
