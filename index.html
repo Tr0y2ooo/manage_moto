@@ -11,59 +11,149 @@
 
 <style>
 body {
-margin:0;
-font-family:"Noto Sans TC",sans-serif;
-background:#121212;
-color:#f0f0f0;
-font-size:18px;
+  margin:0;
+  font-family:"Noto Sans TC",sans-serif;
+  background:#121212;
+  color:#f0f0f0;
+  font-size:18px;
 }
-header { background:linear-gradient(90deg,#1f1f1f,#2c2c2c); color:#80e27e; text-align:center; padding:16px 0; font-size:1.8rem; font-weight:bold; letter-spacing:1px; box-shadow:0 2px 10px rgba(0,0,0,0.3);}
-main { display:flex; flex-wrap:wrap; justify-content:center; gap:24px; padding:30px; max-width:1300px; margin:auto;}
-#loginContainer, #formContainer { background:#1e1e1e; border-radius:12px; padding:24px; width:380px; box-shadow:0 0 12px rgba(0,0,0,0.4);}
-h2 { color:#a5d6a7; border-left:4px solid #81c784; padding-left:8px;}
-label { display:block; margin-top:12px; font-weight:600;}
-input, textarea, select, button { width:100%; padding:8px; margin-top:6px; border:none; border-radius:6px; font-size:0.95rem; outline:none;}
+header {
+  background:linear-gradient(90deg,#1f1f1f,#2c2c2c);
+  color:#80e27e;
+  text-align:center;
+  padding:16px 0;
+  font-size:1.8rem;
+  font-weight:bold;
+  letter-spacing:1px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.3);
+}
+main {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:24px;
+  padding:30px;
+  max-width:1300px;
+  margin:auto;
+}
+#loginContainer, #formContainer {
+  background:#1e1e1e;
+  border-radius:12px;
+  padding:24px;
+  width:380px;
+  box-shadow:0 0 12px rgba(0,0,0,0.4);
+}
+h2 {
+  color:#a5d6a7;
+  border-left:4px solid #81c784;
+  padding-left:8px;
+}
+label {
+  display:block;
+  margin-top:12px;
+  font-weight:600;
+}
+input, textarea, select, button {
+  width:100%;
+  padding:8px;
+  margin-top:6px;
+  border:none;
+  border-radius:6px;
+  font-size:0.95rem;
+  outline:none;
+}
 input, textarea, select {
-background:#2a2a2a;
-color:#eee;
-font-size:16px;
-padding:10px;
+  background:#2a2a2a;
+  color:#eee;
+  font-size:16px;
+  padding:10px;
 }
-input:focus, textarea:focus, select:focus { background:#333; border:1px solid #81c784;}
-button { cursor:pointer; margin-top:16px; transition:0.2s;}
+input:focus, textarea:focus, select:focus {
+  background:#333;
+  border:1px solid #81c784;
+}
+button {
+  cursor:pointer;
+  margin-top:16px;
+  transition:0.2s;
+}
 button:hover { transform:scale(1.03);}
-#bikeGrid { flex:1; min-width:650px; display:flex; flex-wrap:wrap; gap:20px; justify-content:center;}
-.bike-card { background:#1f1f1f; border-radius:12px; padding:16px; width:300px; box-shadow:0 0 10px rgba(0,0,0,0.4); transition: transform 0.2s ease, box-shadow 0.2s ease;font-size:17px;}
-.bike-card:hover { transform:translateY(-4px); box-shadow:0 0 18px rgba(129,199,132,0.3);}
-.image-slider { display:flex; overflow-x:auto; gap:8px; margin-bottom:8px;}
-.image-slider img { height:140px; border-radius:8px; flex-shrink:0;}
-.status-badge { padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; }
-.status-badge.販售中{background:#2e7d32;color:#fff;}
-.status-badge.已售出{background:#c62828;color:#fff;}
-.status-badge.暫售{background:#ffb300;color:#000;}
-.status-badge.維修中{background:#1565c0;color:#fff;}
+#bikeGrid {
+  flex:1;
+  min-width:650px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:20px;
+  justify-content:center;
+}
+.bike-card {
+  background:#1f1f1f;
+  border-radius:12px;
+  padding:16px;
+  width:300px;
+  box-shadow:0 0 10px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size:17px;
+}
+.bike-card:hover {
+  transform:translateY(-4px);
+  box-shadow:0 0 18px rgba(129,199,132,0.3);
+}
+.image-slider {
+  display:flex;
+  overflow-x:auto;
+  gap:8px;
+  margin-bottom:8px;
+}
+.image-slider img {
+  height:140px;
+  border-radius:8px;
+  flex-shrink:0;
+}
+.status-badge {
+  padding:4px 10px;
+  border-radius:12px;
+  font-weight:bold;
+  font-size:0.85rem;
+}
+.status-badge.販售中 {background:#2e7d32;color:#fff;}
+.status-badge.已售出 {background:#c62828;color:#fff;}
+.status-badge.暫售 {background:#ffb300;color:#000;}
+.status-badge.維修中 {background:#1565c0;color:#fff;}
+
+/* 手機版調整 */
 @media (max-width:700px){
-
-main{
-flex-direction:column;
-padding:15px;
-}
-
-#bikeGrid{
-min-width:100%;
-}
-
-.bike-card{
-width:100%;
-}
-
+  main{
+    flex-direction:column;
+    padding:15px;
+  }
+  #bikeGrid{
+    display:flex;
+    flex-direction:column;  /* 一張一張上下排列 */
+    gap:20px;
+    min-width:100%;
+  }
+  .bike-card{
+    width:100%;  /* 每次一張卡片 */
+    max-width:100%;
+  }
+  .image-slider img{
+    height:180px; /* 手機版圖片更大 */
+    width:auto;
+  }
+  input, textarea, select, button{
+    font-size:18px;
+    padding:14px;
+  }
+  button{
+    height:50px;
+  }
+  header{
+    font-size:2rem;
+  }
 }
 </style>
 </head>
-    <div style="text-align:center;margin-top:10px;">
-<label>字體大小</label>
-<input type="range" id="fontSlider" min="14" max="24" value="18">
-</div>
 <body>
 <header>🏍️ 機車庫存管理系統</header>
 <main>
@@ -435,13 +525,6 @@ await firestore.collection('bikes').doc(id).update(updateData);
 
   infoDiv.querySelector('.cancelBtn').addEventListener('click', loadBikes);
 }
-const fontSlider = document.getElementById("fontSlider");
-
-fontSlider.addEventListener("input",()=>{
-
-document.body.style.fontSize = fontSlider.value + "px";
-
-});
 </script>
 </body>
 </html>
